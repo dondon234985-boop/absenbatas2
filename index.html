@@ -94,7 +94,7 @@
 
 <script>
   // PENTING: Update URL GAS Anda di sini
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxDDDqfyl16Lw3aAMXidqjFTxLUDE7E6_kWO8yn6nPj2M8W8HVHtaLFtJ_Rl5LJODvhKw/exec"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzQrDmAe0bT7rjGk_z2r9gCgu_R-hlQwm6ot7nE0w1m9211keZf-IEsdSYwC-2-akGa7A/exec"; 
   
   let labeledDescriptors = [], officeLocations = [];
   let map, adminMarker;
@@ -155,6 +155,11 @@
   }
 
   async function processAbsence(tipe) {
+    if (labeledDescriptors.length === 0) {
+      alert("Database wajah kosong! Harap daftar terlebih dahulu.");
+      resetAbsenUI();
+      return;
+    }
     btnMasuk.disabled = true; btnPulang.disabled = true; updateStatus("MENDETEKSI...","warning");
     const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
     if(!d) { alert("Wajah tidak terlihat!"); resetUI(); return; }
