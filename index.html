@@ -190,19 +190,55 @@
   }
 
   function checkLocation() {
+    updateStatus("MENGECEK JARAK...", "warning");
+    
     navigator.geolocation.getCurrentPosition(pos => {
-      const uLat = pos.coords.latitude, uLon = pos.coords.longitude;
-      let found = officeLocations.find(o => getDistance(uLat, uLon, o.lat, o.lon) <= o.rad);
-      if(found) { 
-        updateStatus("LOKASI: " + found.name, "success"); 
-        btnMasuk.disabled = false; btnPulang.disabled = false; 
+      const uLat = pos.coords.latitude;
+      const uLon = pos.coords.longitude;
+      let closestOffice = null;
+      let minDistance = Infinity;
+
+      // Pastikan officeLocations tidak kosong
+      if (!officeLocations || officeLocations.length === 0) {
+        updateStatus("DATA KANTOR KOSONG", "danger");
+        alert("Data lokasi kantor belum ada. Silakan isi di menu Admin.");
+        return;
+      }
+
+      // Loop semua kantor untuk mencari yang terdekat
+      for (let o of officeLocations) {
+        // Gunakan parseFloat untuk memastikan koordinat adalah angka
+        const dist = getDistance(uLat, uLon, parseFloat(o.lat), parseFloat(o.lon));
+        
+        if (dist <= parseFloat(o.rad)) {
+          closestOffice = o;
+          break; // Berhenti jika sudah menemukan kantor yang masuk radius
+        }
+        
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestOffice = o;
+        }
+      }
+
+      if (closestOffice && minDistance <= parseFloat(closestOffice.rad)) { 
+        updateStatus("LOKASI: " + closestOffice.name, "success"); 
+        btnMasuk.disabled = false; 
+        btnPulang.disabled = false; 
       } else { 
         updateStatus("DI LUAR RADIUS", "danger"); 
-        if(officeLocations.length > 0) alert("Anda berada di luar area kantor!");
+        // Berikan pesan detail agar kita tahu selisihnya
+        alert(`Anda berada di luar radius kantor!\n\nKantor terdekat: ${closestOffice ? closestOffice.name : '-'}\nJarak Anda: ${Math.round(minDistance)} meter\nRadius Diizinkan: ${closestOffice ? closestOffice.rad : '0'} meter.\n\nSaran: Coba keluar ruangan sebentar agar GPS lebih akurat.`);
       }
-    }, () => alert("GPS Mati! Harap aktifkan lokasi."), {enableHighAccuracy:true});
+    }, (err) => {
+      updateStatus("GPS TIDAK AKTIF", "danger");
+      alert("Gagal mengambil lokasi. Pastikan GPS HP Aktif dan Izin Kamera/Lokasi diizinkan.");
+    }, {
+      enableHighAccuracy: true, // WAJIB untuk HP
+      timeout: 10000,
+      maximumAge: 0
+    });
   }
-
   // 5. Proses Absensi
   async function processAbsence(tipe) {
     if(labeledDescriptors.length === 0) return alert("Database wajah kosong!");
