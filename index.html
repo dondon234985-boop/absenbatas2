@@ -108,30 +108,37 @@
   async function init() {
     const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
     try {
-      updateStatus("MENYIAPKAN SISTEM...", "warning");
+      updateStatus("MENGHUBUNGKAN...", "warning");
 
-      // Menjalankan semua proses secara bersamaan (Parallel)
-      const [modelLoad, cameraStream, facesData, officesData] = await Promise.all([
-        Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]),
+      // 1. Jalankan Kamera & Load Model AI
+      const [cameraStream] = await Promise.all([
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }),
-        fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFaces" }) }).then(r => r.json()),
-        fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getOffices" }) }).then(r => r.json())
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
-
       video.srcObject = cameraStream;
-      labeledDescriptors = facesData.map(d => new faceapi.LabeledFaceDescriptors(d.name, [new Float32Array(d.descriptor)]));
-      officeLocations = officesData;
+
+      updateStatus("SINKRON DATA...", "info");
+
+      // 2. Ambil data dari Google Sheets secara terpisah agar mudah dilacak jika gagal
+      const fetchFaces = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFaces" }) });
+      const resFaces = await fetchFaces.json();
       
-      checkLocation(); // Cek lokasi setelah data kantor siap
+      const fetchOffices = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getOffices" }) });
+      const resOffices = await fetchOffices.json();
+
+      // 3. Masukkan data ke variabel global
+      labeledDescriptors = resFaces.map(d => new faceapi.LabeledFaceDescriptors(d.name, [new Float32Array(d.descriptor)]));
+      officeLocations = resOffices;
+      
+      checkLocation(); // Hitung jarak setelah data kantor siap
 
     } catch (e) { 
-      console.error(e);
-      updateStatus("ERROR SISTEM", "danger");
-      alert("Terjadi kesalahan saat memuat data. Periksa koneksi internet.");
+      console.error("Detail Error:", e);
+      updateStatus("GAGAL SINKRON", "danger");
+      // Pesan error lebih detail
+      alert("Koneksi Gagal: " + e.message + "\n\nPastikan Deployment GAS sudah diset ke 'Anyone' dan URL sudah benar.");
     }
   }
 
