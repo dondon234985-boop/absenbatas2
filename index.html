@@ -16,6 +16,7 @@
     .page-section { display: none; }
     .active-page { display: block; }
     .btn-custom { padding: 12px; font-weight: bold; border-radius: 12px; }
+    .table-responsive { font-size: 0.7rem; border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -44,20 +45,21 @@
   <!-- HALAMAN RIWAYAT -->
   <div id="riwayat-page" class="page-section">
     <div class="card border-0 shadow-sm p-2 rounded-4">
-      <div class="table-responsive" style="font-size: 0.75rem;">
-        <table class="table table-sm table-striped">
-         <thead class="table-dark">
-		  <tr>
-			<th>Nama</th>
-			<th>Divisi</th> <!-- KOLOM BARU -->
-			<th>Tipe</th>
-			<th>Waktu</th>
-			<th>Min</th>
-			<th>Map</th>
-		  </tr>
-		</thead>
-		<tbody id="logTableBody"></tbody>
-          
+      <div class="table-responsive">
+        <table class="table table-sm table-striped mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Nama</th>
+              <th>Divisi</th>
+              <th>Tipe</th>
+              <th>Waktu</th>
+              <th>Min</th>
+              <th>Map</th>
+            </tr>
+          </thead>
+          <tbody id="logTableBody">
+            <tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>
+          </tbody>
         </table>
       </div>
       <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="loadLogs()">Refresh</button>
@@ -68,8 +70,8 @@
   <div id="daftar-page" class="page-section">
     <div class="card border-0 shadow-sm p-4 rounded-4">
       <input type="text" id="regNama" class="form-control mb-2" placeholder="Nama Lengkap">
-      <input type="text" id="regNIK" class="form-control mb-3" placeholder="NIK">
-	  <input type="text" id="regDivisi" class="form-control mb-3" placeholder="Divisi (Contoh: IT / Marketing)">
+      <input type="text" id="regNIK" class="form-control mb-2" placeholder="NIK">
+      <input type="text" id="regDivisi" class="form-control mb-3" placeholder="Divisi (Contoh: IT / Marketing)">
       <button id="btnReg" class="btn btn-primary btn-custom w-100" onclick="register()">SIMPAN WAJAH</button>
     </div>
   </div>
@@ -95,7 +97,9 @@
 </div>
 
 <script>
-  const GAS_URL = "URL_WEB_APP_ANDA_DISINI"; 
+  // GANTI DENGAN URL WEB APP GAS TERBARU ANDA
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbyd38iAjNSv8TLFfQAXonRQh0u9LVSUkLw8QXGxwIy8GYO_IulhweYtXR4e0eL6ixz0/exec"; 
+  
   let labeledDescriptors = [], officeLocations = [];
   const video = document.getElementById('video'), status = document.getElementById('status');
   const btnMasuk = document.getElementById('btnMasuk'), btnPulang = document.getElementById('btnPulang');
@@ -112,10 +116,17 @@
   async function init() {
     const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
     try {
-      await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)]);
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       video.srcObject = stream;
-      const [resF, resO] = await Promise.all([fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getFaces"})}).then(r=>r.json()), fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getOffices"})}).then(r=>r.json())]);
+      const [resF, resO] = await Promise.all([
+        fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getFaces"})}).then(r=>r.json()),
+        fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getOffices"})}).then(r=>r.json())
+      ]);
       labeledDescriptors = resF.map(d => new faceapi.LabeledFaceDescriptors(d.name, [new Float32Array(d.descriptor)]));
       officeLocations = resO;
       checkLocation();
@@ -141,71 +152,84 @@
   async function processAbsence(tipe) {
     btnMasuk.disabled = true; btnPulang.disabled = true; updateStatus("SCANNING...","warning");
     const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    if(!d) { alert("Wajah tidak terlihat!"); resetUI(); return; }
+    if(!d) { alert("Wajah tidak terlihat!"); resetAbsenUI(); return; }
     const match = new faceapi.FaceMatcher(labeledDescriptors, 0.6).findBestMatch(d.descriptor);
-    if(match.label === 'unknown') { alert("Wajah tidak dikenal!"); resetUI(); }
+    if(match.label === 'unknown') { alert("Wajah tidak dikenal!"); resetAbsenUI(); }
     else {
       navigator.geolocation.getCurrentPosition(async p => {
         const res = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"attendance",name:match.label,type:tipe,location:p.coords.latitude+","+p.coords.longitude})}).then(r=>r.json());
-        alert("✅ "+res.message+"\nNama: "+match.label); resetUI();
+        alert(`✅ ${res.message}\nNama: ${match.label}`); 
+        resetAbsenUI();
       });
     }
   }
 
   async function loadLogs() {
-  const b = document.getElementById('logTableBody');
-  b.innerHTML = '<tr><td colspan="6">Memuat...</td></tr>';
-  const logs = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getLogs"})}).then(r=>r.json());
-  
-  // Format Tabel Baru
-  b.innerHTML = logs.slice(1).map(l => `
-    <tr>
-      <td class="fw-bold">${l[0]}</td>
-      <td>${l[6] || '-'}</td> <!-- Kolom Divisi -->
-      <td><span class="badge ${l[1]=='MASUK'?'bg-success':'bg-danger'}">${l[1]}</span></td>
-      <td>${l[3]}</td>
-      <td>${l[5]||'-'}</td>
-      <td><a href="https://www.google.com/maps?q=${l[4]}" target="_blank">Map</a></td>
-    </tr>
-  `).join('');
-}
+    const tbody = document.getElementById('logTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>';
+    try {
+      const response = await fetch(GAS_URL, { 
+        method: "POST", 
+        body: JSON.stringify({ action: "getLogs" }) 
+      });
+      const logs = await response.json();
+      let html = "";
+      
+      if (!logs || logs.length <= 1) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada riwayat</td></tr>';
+        return;
+      }
+
+      for(let i=1; i < logs.length; i++) {
+        const tipeBadge = logs[i][1] === 'MASUK' ? 'bg-success' : 'bg-danger';
+        // l[0]:Nama, l[6]:Divisi, l[1]:Tipe, l[3]:Jam(Full), l[5]:Durasi, l[4]:Loc
+        html += `<tr>
+          <td class="fw-bold">${logs[i][0]}</td>
+          <td>${logs[i][6] || '-'}</td>
+          <td><span class="badge ${tipeBadge}">${logs[i][1]}</span></td>
+          <td>${logs[i][3]}</td>
+          <td>${logs[i][5] || '-'}</td>
+          <td><a href="https://www.google.com/maps?q=${logs[i][4]}" target="_blank" class="btn btn-sm btn-link p-0">Map</a></td>
+        </tr>`;
+      }
+      tbody.innerHTML = html;
+    } catch (e) {
+      console.error(e);
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal memuat data</td></tr>';
+    }
+  }
 
   function authAdmin() { if(document.getElementById('adminPin').value === "123456") { document.getElementById('admin-auth').style.display='none'; document.getElementById('admin-content').style.display='block'; } else alert("Salah!"); }
+  
   async function addOffice() {
     const data = { name: document.getElementById('offName').value, lat: document.getElementById('offLat').value, lon: document.getElementById('offLon').value, rad: document.getElementById('offRad').value };
     const res = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"saveOffice",pin:document.getElementById('adminPin').value,data:data})}).then(r=>r.json());
     alert(res.message); location.reload();
   }
-  async function register() {
-  const nama = document.getElementById('regNama').value;
-  const nik = document.getElementById('regNIK').value;
-  const divisi = document.getElementById('regDivisi').value; // Ambil nilai divisi
-  
-  if(!nama || !nik || !divisi) return alert("Lengkapi data Nama, NIK, dan Divisi!");
-  
-  btnReg.disabled = true;
-  updateStatus("MEREKAM...", "warning");
 
-  const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-  if(d) {
-    await fetch(GAS_URL, {
-      method: "POST", 
-      body: JSON.stringify({
-        action: "register", 
-        name: nama, 
-        nik: nik, 
-        divisi: divisi, // Kirim ke GAS
-        descriptor: Array.from(d.descriptor)
-      })
-    });
-    alert("Registrasi Sukses!"); 
-    location.reload();
-  } else {
-    alert("Gagal merekam wajah.");
-    btnReg.disabled = false;
+  async function register() {
+    const nama = document.getElementById('regNama').value;
+    const nik = document.getElementById('regNIK').value;
+    const divisi = document.getElementById('regDivisi').value;
+    if(!nama || !nik || !divisi) return alert("Lengkapi data Nama, NIK, dan Divisi!");
+    
+    document.getElementById('btnReg').disabled = true;
+    updateStatus("MEREKAM...", "warning");
+    const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+    if(d) {
+      await fetch(GAS_URL, {
+        method: "POST", 
+        body: JSON.stringify({action: "register", name: nama, nik: nik, divisi: divisi, descriptor: Array.from(d.descriptor)})
+      });
+      alert("Registrasi Sukses!"); location.reload();
+    } else {
+      alert("Gagal merekam wajah!");
+      document.getElementById('btnReg').disabled = false;
+      updateStatus("SISTEM SIAP", "success");
+    }
   }
-}
-  function resetUI() { btnMasuk.disabled = false; btnPulang.disabled = false; updateStatus("SISTEM SIAP","success"); }
+
+  function resetAbsenUI() { btnMasuk.disabled = false; btnPulang.disabled = false; updateStatus("SISTEM SIAP","success"); }
   function updateStatus(t,c) { status.innerText = t; status.className = "badge rounded-pill bg-"+c+" px-3 py-2"; }
   window.onload = init;
 </script>
