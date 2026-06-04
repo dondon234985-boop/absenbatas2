@@ -3,75 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Absensi Wajah & Geofencing</title>
+  <title>Sistem Absensi Wajah - GAS WebMaster</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
-    body { background: #f0f2f5; font-family: sans-serif; }
+    body { background: #f0f2f5; font-family: 'Segoe UI', Tahoma, sans-serif; }
     .main-container { max-width: 500px; margin: auto; padding: 15px; }
-    #video-container { position: relative; width: 100%; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    #video-container { position: relative; width: 100%; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); line-height: 0; }
     video { width: 100%; height: auto; display: block; }
     .nav-pills .nav-link { border-radius: 10px; font-weight: bold; font-size: 0.8rem; background: #fff; margin: 0 2px; border: 1px solid #ddd; color: #666; }
-    .nav-pills .nav-link.active { background-color: #0d6efd; color: white; }
+    .nav-pills .nav-link.active { background-color: #0d6efd; color: white; border-color: #0d6efd; }
     .page-section { display: none; }
     .active-page { display: block; }
-    .btn-custom { padding: 12px; font-weight: bold; border-radius: 12px; }
-    .table-responsive { font-size: 0.75rem; border-radius: 10px; }
+    .btn-custom { padding: 12px; font-weight: bold; border-radius: 12px; transition: 0.3s; }
+    .table-responsive { font-size: 0.7rem; border-radius: 10px; }
+    .badge-status { font-size: 0.85rem; padding: 8px 15px; }
   </style>
 </head>
 <body>
 
 <div class="main-container">
-  <ul class="nav nav-pills nav-justified mb-3 p-1">
+  <!-- Navigasi Atas -->
+  <ul class="nav nav-pills nav-justified mb-3 p-1 bg-white rounded-4 shadow-sm">
     <li class="nav-item"><a class="nav-link active" href="#" onclick="showPage('absen-page', this)">Absen</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('riwayat-page', this)">Riwayat</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('daftar-page', this)">Daftar</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('admin-page', this)">Admin</a></li>
   </ul>
 
+  <!-- Bagian Kamera (Hanya muncul di menu Absen & Daftar) -->
   <div id="cam-section">
-    <div id="video-container" class="mb-3"><video id="video" autoplay muted playsinline></video></div>
-    <div class="text-center mb-4"><span id="status" class="badge rounded-pill bg-secondary px-3 py-2">Inisialisasi AI...</span></div>
-  </div>
-
-  <div id="absen-page" class="page-section active-page">
-    <div class="row g-2">
-      <div class="col-6"><button id="btnMasuk" class="btn btn-success btn-custom w-100 shadow-sm" onclick="processAbsence('MASUK')" disabled>MASUK</button></div>
-      <div class="col-6"><button id="btnPulang" class="btn btn-danger btn-custom w-100 shadow-sm" onclick="processAbsence('PULANG')" disabled>PULANG</button></div>
+    <div id="video-container" class="mb-3">
+      <video id="video" autoplay muted playsinline></video>
+    </div>
+    <div class="text-center mb-4">
+      <span id="status" class="badge-status badge rounded-pill bg-secondary text-white">Inisialisasi AI...</span>
     </div>
   </div>
 
+  <!-- HALAMAN 1: MENU ABSEN -->
+  <div id="absen-page" class="page-section active-page">
+    <div class="row g-2">
+      <div class="col-6">
+        <button id="btnMasuk" class="btn btn-success btn-custom w-100 shadow-sm" onclick="processAbsence('MASUK')" disabled>ABSEN MASUK</button>
+      </div>
+      <div class="col-6">
+        <button id="btnPulang" class="btn btn-danger btn-custom w-100 shadow-sm" onclick="processAbsence('PULANG')" disabled>ABSEN PULANG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HALAMAN 2: MENU RIWAYAT -->
   <div id="riwayat-page" class="page-section">
     <div class="card border-0 shadow-sm p-2 rounded-4">
       <div class="table-responsive">
         <table class="table table-sm table-striped mb-0">
           <thead class="table-dark">
-            <tr><th>Nama</th><th>Divisi</th><th>Tipe</th><th>Waktu</th><th>Min</th><th>Map</th></tr>
+            <tr>
+              <th>Nama</th>
+              <th>Divisi</th>
+              <th>Tipe</th>
+              <th>Waktu</th>
+              <th>Min</th>
+              <th>Map</th>
+            </tr>
           </thead>
           <tbody id="logTableBody">
-            <tr><td colspan="6" class="text-center">Memuat riwayat...</td></tr>
+            <tr><td colspan="6" class="text-center text-muted">Klik refresh untuk memuat data</td></tr>
           </tbody>
         </table>
       </div>
-      <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="loadLogs()">Refresh</button>
+      <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="loadLogs()">Refresh Data</button>
     </div>
   </div>
 
+  <!-- HALAMAN 3: MENU DAFTAR -->
   <div id="daftar-page" class="page-section">
     <div class="card border-0 shadow-sm p-4 rounded-4">
-      <h6 class="fw-bold mb-3">Registrasi Karyawan</h6>
+      <h6 class="fw-bold mb-3">Registrasi Karyawan Baru</h6>
       <input type="text" id="regNama" class="form-control mb-2" placeholder="Nama Lengkap">
       <input type="text" id="regNIK" class="form-control mb-2" placeholder="NIK">
-      <input type="text" id="regDivisi" class="form-control mb-3" placeholder="Divisi (Contoh: IT / HRD)">
+      <input type="text" id="regDivisi" class="form-control mb-3" placeholder="Divisi (Contoh: IT / Marketing)">
       <button id="btnReg" class="btn btn-primary btn-custom w-100 shadow-sm" onclick="register()">SIMPAN WAJAH</button>
     </div>
   </div>
 
+  <!-- HALAMAN 4: MENU ADMIN -->
   <div id="admin-page" class="page-section">
     <div class="card border-0 shadow-sm p-4 rounded-4">
       <div id="admin-auth">
         <input type="password" id="adminPin" class="form-control mb-2" placeholder="PIN Admin">
-        <button class="btn btn-dark w-100" onclick="authAdmin()">Login Admin</button>
+        <button class="btn btn-dark w-100" onclick="authAdmin()">Login Panel Admin</button>
       </div>
       <div id="admin-content" style="display:none;">
         <h6 class="fw-bold mb-3">Tambah Lokasi Kantor</h6>
@@ -79,49 +101,68 @@
         <input type="text" id="offLat" class="form-control mb-2" placeholder="Latitude">
         <input type="text" id="offLon" class="form-control mb-2" placeholder="Longitude">
         <input type="number" id="offRad" class="form-control mb-3" placeholder="Radius (Meter)">
-        <button class="btn btn-primary w-100" onclick="addOffice()">Simpan Lokasi</button>
+        <button class="btn btn-primary w-100 shadow-sm" onclick="addOffice()">Simpan Lokasi</button>
       </div>
     </div>
   </div>
+
+  <p class="text-center mt-5 text-muted" style="font-size: 10px;">Powered by GAS-WebMaster v4.2</p>
 </div>
 
 <script>
-  // PENTING: Gunakan URL Web App GAS Anda yang terbaru
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbz1YgL--VGIIoUb7fGDc7KTrYIAz0tWQmApl_2CMlIaA9XG0B55dZmGswPXKr-H9SoV/exec"; 
+  // PENTING: Gunakan URL Web App GAS Anda (Hasil New Deployment - Anyone)
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzaDkGzLcs_HzcaqtaKlMuVevysQ-tnQKxzutyMSStTNKePvrxcVOSxkdpAeWNFYRDC/exec"; 
   
   let labeledDescriptors = [], officeLocations = [];
   const video = document.getElementById('video'), status = document.getElementById('status');
   const btnMasuk = document.getElementById('btnMasuk'), btnPulang = document.getElementById('btnPulang');
 
+  // 1. Fungsi Navigasi Halaman
   function showPage(pId, el) {
     document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active-page'));
     document.getElementById(pId).classList.add('active-page');
     document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
     el.classList.add('active');
+
+    // Sembunyikan kamera jika di menu Riwayat atau Admin
     document.getElementById('cam-section').style.display = (pId === 'riwayat-page' || pId === 'admin-page') ? 'none' : 'block';
+    
     if(pId === 'riwayat-page') loadLogs();
   }
 
+  // 2. Inisialisasi AI & Data Awal
   async function init() {
     const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
     try {
+      updateStatus("MEMUAT AI...", "warning");
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       video.srcObject = stream;
+
+      updateStatus("MENYINKRONKAN DATA...", "info");
+      
+      // Ambil Wajah & Lokasi secara paralel
       const [resF, resO] = await Promise.all([
-        fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getFaces"})}).then(r=>r.json()),
-        fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getOffices"})}).then(r=>r.json())
+        fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFaces" }) }).then(r => r.json()),
+        fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getOffices" }) }).then(r => r.json())
       ]);
+
       labeledDescriptors = resF.map(d => new faceapi.LabeledFaceDescriptors(d.name, [new Float32Array(d.descriptor)]));
       officeLocations = resO;
+      
       checkLocation();
-    } catch (e) { updateStatus("ERROR SISTEM","danger"); }
+    } catch (e) { 
+      updateStatus("GAGAL MEMUAT SISTEM", "danger");
+      console.error(e);
+    }
   }
 
+  // 3. Logika Geofencing (Jarak)
   function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371000;
     const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
@@ -133,27 +174,48 @@
     navigator.geolocation.getCurrentPosition(pos => {
       const uLat = pos.coords.latitude, uLon = pos.coords.longitude;
       let found = officeLocations.find(o => getDistance(uLat, uLon, o.lat, o.lon) <= o.rad);
-      if(found) { updateStatus("LOKASI: "+found.name,"success"); btnMasuk.disabled = false; btnPulang.disabled = false; }
-      else { updateStatus("DI LUAR RADIUS","danger"); alert("Anda di luar radius kantor!"); }
-    }, () => alert("GPS Mati!"), {enableHighAccuracy:true});
+      if(found) { 
+        updateStatus("LOKASI: " + found.name, "success"); 
+        btnMasuk.disabled = false; btnPulang.disabled = false; 
+      } else { 
+        updateStatus("DI LUAR RADIUS", "danger"); 
+        alert("Peringatan: Anda berada di luar area kantor!"); 
+      }
+    }, () => alert("Gagal mengambil GPS!"), {enableHighAccuracy:true});
   }
 
+  // 4. Proses Absensi
   async function processAbsence(tipe) {
-    btnMasuk.disabled = true; btnPulang.disabled = true; updateStatus("SCANNING...","warning");
-    const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    if(!d) { alert("Wajah tidak terlihat!"); resetAbsenUI(); return; }
-    const match = new faceapi.FaceMatcher(labeledDescriptors, 0.6).findBestMatch(d.descriptor);
-    if(match.label === 'unknown') { alert("Wajah tidak dikenal!"); resetAbsenUI(); }
-    else {
-      navigator.geolocation.getCurrentPosition(async p => {
-        const response = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"attendance",name:match.label,type:tipe,location:p.coords.latitude+","+p.coords.longitude})});
-        const resJson = await response.json();
-        alert(`✅ ${resJson.message}\nNama: ${match.label}`); 
-        resetAbsenUI();
-      });
-    }
+    btnMasuk.disabled = true; btnPulang.disabled = true;
+    updateStatus("SCANNING WAJAH...", "warning");
+
+    try {
+      const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+      if(!d) { 
+        alert("Wajah tidak terlihat!"); 
+        resetAbsenUI(); return; 
+      }
+
+      const match = new faceapi.FaceMatcher(labeledDescriptors, 0.6).findBestMatch(d.descriptor);
+      if(match.label === 'unknown') { 
+        alert("Wajah tidak terdaftar!"); 
+        resetAbsenUI(); 
+      } else {
+        navigator.geolocation.getCurrentPosition(async p => {
+          updateStatus("MENYIMPAN...", "info");
+          const response = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "attendance", name: match.label, type: tipe, location: p.coords.latitude + "," + p.coords.longitude })
+          });
+          const resJson = await response.json();
+          alert(`✅ ${resJson.message}\nNama: ${match.label}`); 
+          resetAbsenUI();
+        });
+      }
+    } catch (e) { alert("Error Teknis!"); resetAbsenUI(); }
   }
 
+  // 5. Fungsi Riwayat (Fixed Fetch)
   async function loadLogs() {
     const tbody = document.getElementById('logTableBody');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>';
@@ -163,15 +225,16 @@
         body: JSON.stringify({ action: "getLogs" }) 
       });
       const logs = await response.json();
-      let html = "";
       
       if (!logs || logs.length <= 1) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada riwayat</td></tr>';
         return;
       }
 
+      let html = "";
       for(let i=1; i < logs.length; i++) {
         const tipeBadge = logs[i][1] === 'MASUK' ? 'bg-success' : 'bg-danger';
+        // log index: 0:Nama, 6:Divisi, 1:Tipe, 3:Waktu, 5:Durasi, 4:Loc
         html += `<tr>
           <td class="fw-bold">${logs[i][0]}</td>
           <td>${logs[i][6] || '-'}</td>
@@ -184,42 +247,47 @@
       tbody.innerHTML = html;
     } catch (e) {
       console.error(e);
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal memuat data</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal memuat data server.</td></tr>';
     }
   }
 
-  function authAdmin() { if(document.getElementById('adminPin').value === "123456") { document.getElementById('admin-auth').style.display='none'; document.getElementById('admin-content').style.display='block'; } else alert("Salah!"); }
-  
-  async function addOffice() {
-    const data = { name: document.getElementById('offName').value, lat: document.getElementById('offLat').value, lon: document.getElementById('offLon').value, rad: document.getElementById('offRad').value };
-    const res = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"saveOffice",pin:document.getElementById('adminPin').value,data:data})}).then(r=>r.json());
-    alert(res.message); location.reload();
-  }
-
+  // 6. Fungsi Registrasi
   async function register() {
     const nama = document.getElementById('regNama').value;
     const nik = document.getElementById('regNIK').value;
     const divisi = document.getElementById('regDivisi').value;
-    if(!nama || !nik || !divisi) return alert("Lengkapi data Nama, NIK, dan Divisi!");
+    const btnR = document.getElementById('btnReg');
+
+    if(!nama || !nik || !divisi) return alert("Isi semua data!");
     
-    document.getElementById('btnReg').disabled = true;
-    updateStatus("MEREKAM...", "warning");
+    btnR.disabled = true;
+    updateStatus("MEREKAM WAJAH...", "warning");
+
     const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
     if(d) {
       await fetch(GAS_URL, {
         method: "POST", 
         body: JSON.stringify({action: "register", name: nama, nik: nik, divisi: divisi, descriptor: Array.from(d.descriptor)})
       });
-      alert("Registrasi Sukses!"); location.reload();
+      alert("✅ Registrasi Berhasil!"); 
+      location.reload();
     } else {
-      alert("Gagal merekam wajah!");
-      document.getElementById('btnReg').disabled = false;
+      alert("Wajah gagal terdeteksi!");
+      btnR.disabled = false;
       updateStatus("SISTEM SIAP", "success");
     }
   }
 
-  function resetAbsenUI() { btnMasuk.disabled = false; btnPulang.disabled = false; updateStatus("SISTEM SIAP","success"); }
-  function updateStatus(t,c) { status.innerText = t; status.className = "badge rounded-pill bg-"+c+" px-3 py-2"; }
+  // Helper UI
+  function authAdmin() { if(document.getElementById('adminPin').value === "123456") { document.getElementById('admin-auth').style.display='none'; document.getElementById('admin-content').style.display='block'; } else alert("PIN Salah!"); }
+  async function addOffice() {
+    const data = { name: document.getElementById('offName').value, lat: document.getElementById('offLat').value, lon: document.getElementById('offLon').value, rad: document.getElementById('offRad').value };
+    await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "saveOffice", pin: document.getElementById('adminPin').value, data: data }) });
+    alert("Lokasi Tersimpan!"); location.reload();
+  }
+  function resetAbsenUI() { btnMasuk.disabled = false; btnPulang.disabled = false; updateStatus("SISTEM SIAP", "success"); }
+  function updateStatus(t, c) { status.innerText = t; status.className = "badge-status badge rounded-pill bg-" + c + " text-white"; }
+  
   window.onload = init;
 </script>
 </body>
