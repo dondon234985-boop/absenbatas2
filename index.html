@@ -151,13 +151,61 @@
   }
 
   // 2. Fungsi Cek Lokasi dengan Akurasi Tinggi & Detail Jarak
-function checkLocation() {
+/*function checkLocation() {
     navigator.geolocation.getCurrentPosition(pos => {
       const uLat = pos.coords.latitude, uLon = pos.coords.longitude;
       let found = officeLocations.find(o => getDistance(uLat, uLon, o.lat, o.lon) <= o.rad);
       if(found) { updateStatus("LOKASI: "+found.name,"success"); btnMasuk.disabled = false; btnPulang.disabled = false; }
       else { updateStatus("DI LUAR RADIUS","danger"); alert("Anda di luar radius kantor!"); }
     }, () => alert("GPS Mati!"), {enableHighAccuracy:true});
+  }
+*/
+  function checkLocation() {
+    updateStatus("MENCARI GPS AKURAT...", "warning");
+    
+    // Opsi GPS Akurasi Tinggi
+    const options = {
+      enableHighAccuracy: true, // Memaksa HP menggunakan Satelit (bukan cuma WiFi/Cell Tower)
+      timeout: 10000,           // Menunggu sinyal stabil selama maksimal 10 detik
+      maximumAge: 0             // Selalu ambil lokasi terbaru, jangan gunakan cache
+    };
+
+    navigator.geolocation.getCurrentPosition(pos => {
+      const uLat = pos.coords.latitude;
+      const uLon = pos.coords.longitude;
+      const accuracy = pos.coords.accuracy; // Memberitahu seberapa akurat sinyalnya (dalam meter)
+
+      console.log(`Lokasi: ${uLat}, ${uLon} | Akurasi: ${accuracy} meter`);
+
+      let foundOffice = null;
+      let minDistance = Infinity;
+
+      // Loop semua kantor
+      officeLocations.forEach(o => {
+        const dist = getDistance(uLat, uLon, parseFloat(o.lat), parseFloat(o.lon));
+        if (dist < minDistance) {
+          minDistance = dist;
+          if (dist <= parseFloat(o.rad)) {
+            foundOffice = o;
+          }
+        }
+      });
+
+      if (foundOffice) {
+        updateStatus("LOKASI: " + foundOffice.name, "success");
+        btnMasuk.disabled = false;
+        btnPulang.disabled = false;
+      } else {
+        updateStatus("DI LUAR RADIUS", "danger");
+        
+        // MENAMPILKAN DETAIL JARAK (Agar user tahu seberapa jauh melesetnya)
+        const selisih = Math.round(minDistance - (officeLocations[0] ? officeLocations[0].rad : 0));
+        alert(`Anda berada di luar area kantor!\n\nJarak Anda saat ini: ${Math.round(minDistance)} meter.\nRadius diizinkan: ${officeLocations[0] ? officeLocations[0].rad : 0} meter.\nSelisih: ${selisih} meter.\n\nSaran: Pastikan "Lokasi Akurat" di HP aktif atau berdiri dekat jendela.`);
+      }
+    }, (err) => {
+      updateStatus("GPS TIDAK TERDETEKSI", "danger");
+      alert("Gagal mengambil lokasi. Pastikan GPS HP aktif dan Izin Lokasi di browser diberikan.");
+    }, options);
   }
   async function processAbsence(tipe) {
     if(labeledDescriptors.length === 0) return alert("Database wajah kosong!");
