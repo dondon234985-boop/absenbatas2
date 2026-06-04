@@ -111,7 +111,7 @@
 
 <script>
   // PENTING: Gunakan URL Web App GAS Anda (Hasil New Deployment - Anyone)
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwMEL1ocFZmbe3KjEJbkqDxo0Gk9HifeZw7laYeLUV-JG9xxqwsyoqtP2GGNeYNMGG1/exec"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzInbCG424r36uCVLJ5zgORLQZyz0UQrCD3s-BKohOV-Qdx8MQ0CY8GX4ICVbn3dur2/exec"; 
   
   let labeledDescriptors = [], officeLocations = [];
   const video = document.getElementById('video'), status = document.getElementById('status');
@@ -216,17 +216,23 @@
   }
 
   // 5. Fungsi Riwayat (Fixed Fetch)
-  async function loadLogs() {
+ async function loadLogs() {
     const tbody = document.getElementById('logTableBody');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>';
+    
     try {
       const response = await fetch(GAS_URL, { 
         method: "POST", 
-        body: JSON.stringify({ action: "getLogs" }) 
+        body: JSON.stringify({ action: "getLogs" }),
+        redirect: "follow" // Menangani pengalihan otomatis Google
       });
-      const logs = await response.json();
+
+      const text = await response.text(); // Ambil teks mentah dulu
+      if (!text) throw new Error("Server mengirim respon kosong");
       
-      if (!logs || logs.length <= 1) {
+      const logs = JSON.parse(text); // Baru diubah ke JSON
+      
+      if (!logs || !Array.isArray(logs) || logs.length <= 1) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada riwayat</td></tr>';
         return;
       }
@@ -234,7 +240,6 @@
       let html = "";
       for(let i=1; i < logs.length; i++) {
         const tipeBadge = logs[i][1] === 'MASUK' ? 'bg-success' : 'bg-danger';
-        // log index: 0:Nama, 6:Divisi, 1:Tipe, 3:Waktu, 5:Durasi, 4:Loc
         html += `<tr>
           <td class="fw-bold">${logs[i][0]}</td>
           <td>${logs[i][6] || '-'}</td>
@@ -246,8 +251,8 @@
       }
       tbody.innerHTML = html;
     } catch (e) {
-      console.error(e);
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal memuat data server.</td></tr>';
+      console.error("Detail Error:", e);
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Gagal memuat data. <br><small>${e.message}</small></td></tr>`;
     }
   }
 
