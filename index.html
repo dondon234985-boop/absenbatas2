@@ -16,7 +16,7 @@
     .page-section { display: none; }
     .active-page { display: block; }
     .btn-custom { padding: 12px; font-weight: bold; border-radius: 12px; }
-    .table-responsive { font-size: 0.7rem; border-radius: 10px; }
+    .table-responsive { font-size: 0.75rem; border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -34,7 +34,6 @@
     <div class="text-center mb-4"><span id="status" class="badge rounded-pill bg-secondary px-3 py-2">Inisialisasi AI...</span></div>
   </div>
 
-  <!-- HALAMAN ABSEN -->
   <div id="absen-page" class="page-section active-page">
     <div class="row g-2">
       <div class="col-6"><button id="btnMasuk" class="btn btn-success btn-custom w-100" onclick="processAbsence('MASUK')" disabled>MASUK</button></div>
@@ -42,31 +41,20 @@
     </div>
   </div>
 
-  <!-- HALAMAN RIWAYAT -->
   <div id="riwayat-page" class="page-section">
     <div class="card border-0 shadow-sm p-2 rounded-4">
       <div class="table-responsive">
-        <table class="table table-sm table-striped mb-0">
+        <table class="table table-sm table-striped">
           <thead class="table-dark">
-            <tr>
-              <th>Nama</th>
-              <th>Divisi</th>
-              <th>Tipe</th>
-              <th>Waktu</th>
-              <th>Min</th>
-              <th>Map</th>
-            </tr>
+            <tr><th>Nama</th><th>Divisi</th><th>Tipe</th><th>Waktu</th><th>Min</th><th>Map</th></tr>
           </thead>
-          <tbody id="logTableBody">
-            <tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>
-          </tbody>
+          <tbody id="logTableBody"></tbody>
         </table>
       </div>
       <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="loadLogs()">Refresh</button>
     </div>
   </div>
 
-  <!-- HALAMAN DAFTAR -->
   <div id="daftar-page" class="page-section">
     <div class="card border-0 shadow-sm p-4 rounded-4">
       <input type="text" id="regNama" class="form-control mb-2" placeholder="Nama Lengkap">
@@ -76,7 +64,6 @@
     </div>
   </div>
 
-  <!-- HALAMAN ADMIN -->
   <div id="admin-page" class="page-section">
     <div class="card border-0 shadow-sm p-4 rounded-4">
       <div id="admin-auth">
@@ -93,11 +80,10 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <script>
-  // GANTI DENGAN URL WEB APP GAS TERBARU ANDA
+  // PENTING: Gunakan URL Web App GAS Anda
   const GAS_URL = "https://script.google.com/macros/s/AKfycbz1YgL--VGIIoUb7fGDc7KTrYIAz0tWQmApl_2CMlIaA9XG0B55dZmGswPXKr-H9SoV/exec"; 
   
   let labeledDescriptors = [], officeLocations = [];
@@ -157,8 +143,9 @@
     if(match.label === 'unknown') { alert("Wajah tidak dikenal!"); resetAbsenUI(); }
     else {
       navigator.geolocation.getCurrentPosition(async p => {
-        const res = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"attendance",name:match.label,type:tipe,location:p.coords.latitude+","+p.coords.longitude})}).then(r=>r.json());
-        alert(`✅ ${res.message}\nNama: ${match.label}`); 
+        const response = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"attendance",name:match.label,type:tipe,location:p.coords.latitude+","+p.coords.longitude})});
+        const resJson = await response.json();
+        alert(`✅ ${resJson.message}\nNama: ${match.label}`); 
         resetAbsenUI();
       });
     }
@@ -172,16 +159,11 @@
         method: "POST", 
         body: JSON.stringify({ action: "getLogs" }) 
       });
+
+      if (!response.ok) throw new Error("Gagal mengambil data");
+
       const logs = await response.json();
       let html = "";
-
-      / Cek apakah responnya OK
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Server Error:", errorText);
-      throw new Error("Server mengembalikan error");
-    }
-
       
       if (!logs || logs.length <= 1) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada riwayat</td></tr>';
@@ -190,7 +172,6 @@
 
       for(let i=1; i < logs.length; i++) {
         const tipeBadge = logs[i][1] === 'MASUK' ? 'bg-success' : 'bg-danger';
-        // l[0]:Nama, l[6]:Divisi, l[1]:Tipe, l[3]:Jam(Full), l[5]:Durasi, l[4]:Loc
         html += `<tr>
           <td class="fw-bold">${logs[i][0]}</td>
           <td>${logs[i][6] || '-'}</td>
