@@ -137,66 +137,20 @@
 
   // 1. Fungsi Menghitung Jarak yang Lebih Presisi
   function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Radius bumi dalam meter
-    const dLat = (parseFloat(lat2) - parseFloat(lat1)) * Math.PI / 180;
-    const dLon = (parseFloat(lon2) - parseFloat(lon1)) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(parseFloat(lat1) * Math.PI / 180) * Math.cos(parseFloat(lat2) * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Hasil dalam meter
+    const R = 6371000;
+    const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
   }
 
   // 2. Fungsi Cek Lokasi dengan Akurasi Tinggi & Detail Jarak
-  function checkLocation() {
-    updateStatus("MENCARI SINYAL GPS...", "warning");
-    
-    const options = {
-      enableHighAccuracy: true, // Memaksa HP menggunakan Satelit GPS (Lebih Akurat)
-      timeout: 10000,           // Menunggu hingga 10 detik untuk mencari titik terbaik
-      maximumAge: 0             // Jangan gunakan lokasi lama yang tersimpan di cache
-    };
-
+function checkLocation() {
     navigator.geolocation.getCurrentPosition(pos => {
-      const uLat = pos.coords.latitude;
-      const uLon = pos.coords.longitude;
-      const accuracy = pos.coords.accuracy; // Tingkat akurasi dalam meter
-
-      console.log(`Lokasi ditemukan: ${uLat}, ${uLon} (Akurasi: ${accuracy}m)`);
-
-      let foundOffice = null;
-      let minDistance = Infinity;
-
-      // Cari kantor mana yang paling dekat
-      officeLocations.forEach(o => {
-        const dist = getDistance(uLat, uLon, o.lat, o.lon);
-        if (dist < minDistance) {
-          minDistance = dist;
-          if (dist <= parseFloat(o.rad)) {
-            foundOffice = o;
-          }
-        }
-      });
-
-      if (foundOffice) {
-        updateStatus("LOKASI: " + foundOffice.name, "success");
-        btnMasuk.disabled = false;
-        btnPulang.disabled = false;
-      } else {
-        updateStatus("DI LUAR RADIUS", "danger");
-        
-        // Memberikan info detail kepada user agar tidak bingung
-        const infoJarak = `Jarak Anda: ${Math.round(minDistance)} meter.\nRadius kantor terdekat: ${officeLocations[0] ? officeLocations[0].rad : 0} meter.\n\nSaran: Dekati jendela atau keluar ruangan agar GPS lebih akurat.`;
-        alert("Peringatan!\n" + infoJarak);
-      }
-    }, (err) => {
-      let msg = "Gagal mendapatkan lokasi.";
-      if(err.code === 1) msg = "Izin lokasi ditolak browser.";
-      if(err.code === 3) msg = "Waktu pencarian GPS habis (Timeout).";
-      
-      updateStatus("GPS ERROR", "danger");
-      alert(msg + " Harap segarkan halaman dan pastikan GPS HP aktif.");
-    }, options);
+      const uLat = pos.coords.latitude, uLon = pos.coords.longitude;
+      let found = officeLocations.find(o => getDistance(uLat, uLon, o.lat, o.lon) <= o.rad);
+      if(found) { updateStatus("LOKASI: "+found.name,"success"); btnMasuk.disabled = false; btnPulang.disabled = false; }
+      else { updateStatus("DI LUAR RADIUS","danger"); alert("Anda di luar radius kantor!"); }
+    }, () => alert("GPS Mati!"), {enableHighAccuracy:true});
   }
   async function processAbsence(tipe) {
     if(labeledDescriptors.length === 0) return alert("Database wajah kosong!");
