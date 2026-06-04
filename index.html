@@ -94,7 +94,7 @@
 
 <script>
   // PENTING: Update URL GAS Anda di sini
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzQrDmAe0bT7rjGk_z2r9gCgu_R-hlQwm6ot7nE0w1m9211keZf-IEsdSYwC-2-akGa7A/exec"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxhP7vrL7HYgAyHY56ZPcLfQsjOmdExmk2JgBcYUo-yDRBmD-TlOViZ_BJXfTIv9tsUtQ/exec"; 
   
   let labeledDescriptors = [], officeLocations = [];
   let map, adminMarker;
@@ -126,17 +126,37 @@
   async function init() {
     const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
     try {
-      await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)]);
+      updateStatus("MEMUAT AI...", "warning");
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       video.srcObject = stream;
-      const [resF, resO] = await Promise.all([
-        fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getFaces"})}).then(r=>r.json()),
-        fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getOffices"})}).then(r=>r.json())
-      ]);
+
+      updateStatus("SINKRON DATA...", "info");
+      
+      const responseF = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFaces" }) });
+      const resF = await responseF.json();
+      if(resF.status === "error") throw new Error("Gagal ambil data wajah");
+
+      const responseO = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getOffices" }) });
+      const resO = await responseO.json();
+      if(resO.status === "error") throw new Error("Gagal ambil data kantor");
+
       labeledDescriptors = resF.map(d => new faceapi.LabeledFaceDescriptors(d.name, [new Float32Array(d.descriptor)]));
       officeLocations = resO;
+      
       checkLocation();
-    } catch (e) { updateStatus("ERROR SISTEM","danger"); }
+
+    } catch (e) {
+      console.error(e);
+      // MENAMPILKAN ERROR YANG LEBIH SPESIFIK
+      updateStatus("ERROR: " + e.message, "danger");
+      alert("Terjadi Kendala: " + e.message);
+    }
   }
 
   function getDistance(lat1, lon1, lat2, lon2) {
