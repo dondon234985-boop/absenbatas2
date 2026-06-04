@@ -3,84 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Absensi Pro - GAS WebMaster</title>
+  <title>Absensi Wajah & Map Picker</title>
   
-  <!-- CSS & JS Peta (Leaflet) -->
+  <!-- CSS & JS Leaflet (Untuk Peta) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- UI Framework -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   
   <style>
-    body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+    body { background: #f0f2f5; font-family: sans-serif; }
     .main-container { max-width: 500px; margin: auto; padding: 15px; }
-    #video-container { position: relative; width: 100%; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); line-height:0; }
+    #video-container { position: relative; width: 100%; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
     video { width: 100%; height: auto; display: block; }
     .nav-pills .nav-link { border-radius: 10px; font-weight: bold; font-size: 0.8rem; background: #fff; margin: 0 2px; border: 1px solid #ddd; color: #666; }
     .nav-pills .nav-link.active { background-color: #0d6efd; color: white; }
     .page-section { display: none; }
     .active-page { display: block; }
-    .btn-custom { padding: 12px; font-weight: bold; border-radius: 12px; transition: 0.3s; }
+    .btn-custom { padding: 12px; font-weight: bold; border-radius: 12px; }
+    
+    /* Style Peta */
     #map { height: 250px; width: 100%; border-radius: 15px; margin-bottom: 15px; border: 1px solid #ddd; z-index: 1; }
-    .table-responsive { font-size: 0.75rem; border-radius: 10px; }
   </style>
 </head>
 <body>
 
 <div class="main-container">
-  <!-- Navigasi Menu -->
-  <ul class="nav nav-pills nav-justified mb-3 p-1 bg-white rounded-4 shadow-sm">
+  <ul class="nav nav-pills nav-justified mb-3 p-1">
     <li class="nav-item"><a class="nav-link active" href="#" onclick="showPage('absen-page', this)">Absen</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('riwayat-page', this)">Riwayat</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('daftar-page', this)">Daftar</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showPage('admin-page', this)">Admin</a></li>
   </ul>
 
-  <!-- Area Kamera -->
   <div id="cam-section">
     <div id="video-container" class="mb-3"><video id="video" autoplay muted playsinline></video></div>
-    <div class="text-center mb-4"><span id="status" class="badge rounded-pill bg-secondary px-3 py-2">Memuat AI...</span></div>
+    <div class="text-center mb-4"><span id="status" class="badge rounded-pill bg-secondary px-3 py-2">Inisialisasi AI...</span></div>
   </div>
 
-  <!-- HALAMAN 1: ABSEN -->
+  <!-- HALAMAN ABSEN -->
   <div id="absen-page" class="page-section active-page">
     <div class="row g-2">
-      <div class="col-6"><button id="btnMasuk" class="btn btn-success btn-custom w-100 shadow-sm" onclick="processAbsence('MASUK')" disabled>MASUK</button></div>
-      <div class="col-6"><button id="btnPulang" class="btn btn-danger btn-custom w-100 shadow-sm" onclick="processAbsence('PULANG')" disabled>PULANG</button></div>
+      <div class="col-6"><button id="btnMasuk" class="btn btn-success btn-custom w-100" onclick="processAbsence('MASUK')" disabled>MASUK</button></div>
+      <div class="col-6"><button id="btnPulang" class="btn btn-danger btn-custom w-100" onclick="processAbsence('PULANG')" disabled>PULANG</button></div>
     </div>
   </div>
 
-  <!-- HALAMAN 2: RIWAYAT -->
+  <!-- HALAMAN RIWAYAT -->
   <div id="riwayat-page" class="page-section">
     <div class="card border-0 shadow-sm p-2 rounded-4">
-      <div class="table-responsive">
-        <table class="table table-sm table-striped mb-0">
-          <thead class="table-dark">
-            <tr><th>Nama</th><th>Divisi</th><th>Tipe</th><th>Waktu</th><th>Min</th><th>Map</th></tr>
-          </thead>
-          <tbody id="logTableBody">
-            <tr><td colspan="6" class="text-center text-muted">Memuat data...</td></tr>
-          </tbody>
+      <div class="table-responsive" style="font-size: 0.75rem;">
+        <table class="table table-sm table-striped">
+          <thead class="table-dark"><tr><th>Nama</th><th>Tipe</th><th>Waktu</th><th>Min</th><th>Map</th></tr></thead>
+          <tbody id="logTableBody"></tbody>
         </table>
       </div>
-      <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="loadLogs()">Refresh Data</button>
+      <button class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="loadLogs()">Refresh</button>
     </div>
   </div>
 
-  <!-- HALAMAN 3: DAFTAR -->
+  <!-- HALAMAN DAFTAR -->
   <div id="daftar-page" class="page-section">
     <div class="card border-0 shadow-sm p-4 rounded-4">
-      <h6 class="fw-bold mb-3">Registrasi Karyawan</h6>
       <input type="text" id="regNama" class="form-control mb-2" placeholder="Nama Lengkap">
-      <input type="text" id="regNIK" class="form-control mb-2" placeholder="NIK">
-      <input type="text" id="regDivisi" class="form-control mb-3" placeholder="Divisi (IT / Marketing / HRD)">
+      <input type="text" id="regNIK" class="form-control mb-3" placeholder="NIK">
       <button id="btnReg" class="btn btn-primary btn-custom w-100" onclick="register()">SIMPAN WAJAH</button>
     </div>
   </div>
 
-  <!-- HALAMAN 4: ADMIN -->
+  <!-- HALAMAN ADMIN -->
   <div id="admin-page" class="page-section">
     <div class="card border-0 shadow-sm p-4 rounded-4">
       <div id="admin-auth">
@@ -89,67 +81,79 @@
       </div>
       <div id="admin-content" style="display:none;">
         <h6 class="fw-bold mb-2">Pilih Lokasi Kantor di Peta:</h6>
-        <div id="map"></div>
-        <input type="text" id="offName" class="form-control mb-2" placeholder="Nama Lokasi/Cabang">
+        <div id="map"></div> <!-- CONTAINER PETA -->
+        
+        <input type="text" id="offName" class="form-control mb-2" placeholder="Nama Lokasi">
         <div class="row g-2 mb-2">
           <div class="col-6"><input type="text" id="offLat" class="form-control" placeholder="Lat" readonly></div>
           <div class="col-6"><input type="text" id="offLon" class="form-control" placeholder="Lon" readonly></div>
         </div>
-        <input type="number" id="offRad" class="form-control mb-3" placeholder="Radius (Meter) misal: 50">
+        <input type="number" id="offRad" class="form-control mb-3" placeholder="Radius (Meter) contoh: 50">
         <button class="btn btn-primary w-100" onclick="addOffice()">Simpan Lokasi</button>
       </div>
     </div>
   </div>
+
 </div>
 
 <script>
-  // PENTING: GANTI DENGAN URL /exec TERBARU ANDA
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwobHLeAcFog_eCiWOU-UGHIF2Pu9i_w3SgrHwtvoB2_UHdaxQtsc6m629Na7eblMQo8A/exec"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzy42Z8tXn_fcjpVn0Mfza_syipFKekBK1nGRLpf2vFgnbsYZte450WhSvvZX5FbNuRlg/exec"; 
   
+  //https://script.google.com/macros/s/AKfycbymjD0OmLqJ4Q6yVgtgPV0KxAB8iSSw8tf9laF-LF5d2oBScZqwDm7geuR_8S2W12t1/exec
   let labeledDescriptors = [], officeLocations = [];
   let map, adminMarker;
+
   const video = document.getElementById('video'), status = document.getElementById('status');
   const btnMasuk = document.getElementById('btnMasuk'), btnPulang = document.getElementById('btnPulang');
 
-  // Navigasi
   function showPage(pId, el) {
     document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active-page'));
     document.getElementById(pId).classList.add('active-page');
     document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
     el.classList.add('active');
+    
     document.getElementById('cam-section').style.display = (pId === 'riwayat-page' || pId === 'admin-page') ? 'none' : 'block';
+    
     if(pId === 'riwayat-page') loadLogs();
-    if(pId === 'admin-page') initAdminMap();
+    if(pId === 'admin-page') initAdminMap(); // Inisialisasi peta saat menu dibuka
   }
 
-  // Peta Admin
+  // --- LOGIKA PETA ADMIN ---
   function initAdminMap() {
-    if (map) return;
+    if (map) return; // Jangan buat ulang jika sudah ada
+    
+    // Default view ke Indonesia
     map = L.map('map').setView([-6.2000, 106.8166], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Saat peta diklik
     map.on('click', function(e) {
       const { lat, lng } = e.latlng;
-      if (adminMarker) { adminMarker.setLatLng(e.latlng); } else { adminMarker = L.marker(e.latlng).addTo(map); }
+      if (adminMarker) {
+        adminMarker.setLatLng(e.latlng);
+      } else {
+        adminMarker = L.marker(e.latlng).addTo(map);
+      }
       document.getElementById('offLat').value = lat.toFixed(6);
       document.getElementById('offLon').value = lng.toFixed(6);
     });
-    navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17));
+
+    // Coba fokus ke lokasi admin saat ini agar mudah mencari kantor
+    navigator.geolocation.getCurrentPosition(p => {
+      const coords = [p.coords.latitude, p.coords.longitude];
+      map.setView(coords, 17);
+    });
   }
 
-  // Inisialisasi AI & Kamera
+  // --- LOGIKA AI & ABSENSI (SAMA SEPERTI SEBELUMNYA) ---
   async function init() {
     const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
     try {
-      updateStatus("MEMUAT MODEL...", "warning");
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-      ]);
+      await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL), faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)]);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       video.srcObject = stream;
-
-      updateStatus("SINKRONISASI...", "info");
       const [resF, resO] = await Promise.all([
         fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getFaces"})}).then(r=>r.json()),
         fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getOffices"})}).then(r=>r.json())
@@ -157,7 +161,7 @@
       labeledDescriptors = resF.map(d => new faceapi.LabeledFaceDescriptors(d.name, [new Float32Array(d.descriptor)]));
       officeLocations = resO;
       checkLocation();
-    } catch (e) { updateStatus("ERROR SISTEM", "danger"); console.error(e); }
+    } catch (e) { updateStatus("ERROR SISTEM","danger"); }
   }
 
   function getDistance(lat1, lon1, lat2, lon2) {
@@ -172,12 +176,12 @@
       const uLat = pos.coords.latitude, uLon = pos.coords.longitude;
       let found = officeLocations.find(o => getDistance(uLat, uLon, o.lat, o.lon) <= o.rad);
       if(found) { updateStatus("LOKASI: "+found.name,"success"); btnMasuk.disabled = false; btnPulang.disabled = false; }
-      else { updateStatus("DI LUAR RADIUS","danger"); alert("Anda berada di luar area kantor!"); }
-    }, () => alert("GPS Gagal!"), {enableHighAccuracy:true});
+      else { updateStatus("DI LUAR RADIUS","danger"); alert("Anda di luar radius kantor!"); }
+    }, () => alert("GPS Mati!"), {enableHighAccuracy:true});
   }
 
   async function processAbsence(tipe) {
-    btnMasuk.disabled = true; btnPulang.disabled = true; updateStatus("MENDETEKSI...","warning");
+    btnMasuk.disabled = true; btnPulang.disabled = true; updateStatus("SCANNING...","warning");
     const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
     if(!d) { alert("Wajah tidak terlihat!"); resetUI(); return; }
     const match = new faceapi.FaceMatcher(labeledDescriptors, 0.6).findBestMatch(d.descriptor);
@@ -185,38 +189,36 @@
     else {
       navigator.geolocation.getCurrentPosition(async p => {
         const res = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"attendance",name:match.label,type:tipe,location:p.coords.latitude+","+p.coords.longitude})}).then(r=>r.json());
-        alert(`✅ ${res.message}\nNama: ${match.label}`); resetUI();
+        alert("✅ "+res.message+"\nNama: "+match.label); resetUI();
       });
     }
   }
 
   async function loadLogs() {
-    const b = document.getElementById('logTableBody'); b.innerHTML = '<tr><td colspan="6">Memuat...</td></tr>';
-    try {
-      const res = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getLogs"})});
-      const logs = await res.json();
-      b.innerHTML = logs.slice(1).map(l => `<tr><td>${l[0]}</td><td>${l[6]||'-'}</td><td><span class="badge ${l[1]=='MASUK'?'bg-success':'bg-danger'}">${l[1]}</span></td><td>${l[3]}</td><td>${l[5]||'-'}</td><td><a href="https://www.google.com/maps?q=${l[4]}" target="_blank">Map</a></td></tr>`).join('');
-    } catch (e) { b.innerHTML = '<tr><td colspan="6">Gagal memuat.</td></tr>'; }
+    const b = document.getElementById('logTableBody'); b.innerHTML = '<tr><td colspan="5">Memuat...</td></tr>';
+    const logs = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"getLogs"})}).then(r=>r.json());
+    b.innerHTML = logs.slice(1).map(l => `<tr><td>${l[0]}</td><td><span class="badge ${l[1]=='MASUK'?'bg-success':'bg-danger'}">${l[1]}</span></td><td>${l[3]}</td><td>${l[5]||'-'}</td><td><a href="https://www.google.com/maps?q=${l[4]}" target="_blank">Map</a></td></tr>`).join('');
   }
 
-  async function register() {
-    const n = document.getElementById('regNama').value, ni = document.getElementById('regNIK').value, dv = document.getElementById('regDivisi').value, br = document.getElementById('btnReg');
-    if(!n || !ni || !dv) return alert("Lengkapi data!");
-    br.disabled = true; updateStatus("MEREKAM...", "warning");
-    const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    if(d) {
-      const res = await fetch(GAS_URL, {method:"POST", body:JSON.stringify({action:"register", name:n, nik:ni, divisi:dv, descriptor:Array.from(d.descriptor)})}).then(r=>r.json());
-      alert(res.message); location.reload();
-    } else { alert("Wajah gagal terekam!"); br.disabled = false; resetUI(); }
-  }
-
-  function authAdmin() { if(document.getElementById('adminPin').value === ADMIN_PIN) { document.getElementById('admin-auth').style.display='none'; document.getElementById('admin-content').style.display='block'; setTimeout(()=>map.invalidateSize(), 400); } else alert("PIN Salah!"); }
+  function authAdmin() { if(document.getElementById('adminPin').value === "123456") { document.getElementById('admin-auth').style.display='none'; document.getElementById('admin-content').style.display='block'; setTimeout(() => { map.invalidateSize(); }, 500); } else alert("Salah!"); }
+  
   async function addOffice() {
     const data = { name: document.getElementById('offName').value, lat: document.getElementById('offLat').value, lon: document.getElementById('offLon').value, rad: document.getElementById('offRad').value };
-    if(!data.lat || !data.name) return alert("Klik lokasi di peta!");
+    if(!data.lat || !data.name) return alert("Pilih lokasi di peta!");
     const res = await fetch(GAS_URL,{method:"POST",body:JSON.stringify({action:"saveOffice",pin:document.getElementById('adminPin').value,data:data})}).then(r=>r.json());
     alert(res.message); location.reload();
   }
+
+  async function register() {
+    const nama = document.getElementById('regNama').value, nik = document.getElementById('regNIK').value;
+    if(!nama || !nik) return alert("Isi data!");
+    const d = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+    if(d) {
+      await fetch(GAS_URL, {method:"POST", body:JSON.stringify({action:"register", name:nama, nik:nik, descriptor:Array.from(d.descriptor)})});
+      alert("Registrasi Sukses!"); location.reload();
+    } else alert("Wajah gagal terekam!");
+  }
+
   function resetUI() { btnMasuk.disabled = false; btnPulang.disabled = false; updateStatus("SISTEM SIAP","success"); }
   function updateStatus(t,c) { status.innerText = t; status.className = "badge rounded-pill bg-"+c+" px-3 py-2"; }
   window.onload = init;
